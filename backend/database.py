@@ -246,8 +246,9 @@ def _end_time_tracking(cursor, task_id: int):
     
     tracking = cursor.fetchone()
     if tracking:
+        # SQLite CURRENT_TIMESTAMP returns UTC time, so we must use utcnow() for consistency
         started_at = datetime.fromisoformat(tracking['started_at'])
-        ended_at = datetime.now()
+        ended_at = datetime.utcnow()
         
         # Calculate duration in minutes (minimum 1 minute)
         duration = (ended_at - started_at).total_seconds() / 60
