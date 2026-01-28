@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lite Kanban - 个人任务看板</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <h1>📋 Lite Kanban</h1>
+            <div class="header-actions">
+                <button @click="processDailyTasks" class="btn-secondary">处理昨日任务</button>
+                <button @click="showCreateModal" class="btn-primary">+ 新建任务</button>
+            </div>
+        </header>
+
+        <main class="kanban-board">
+            <div class="kanban-column" v-for="column in columns" :key="column.id">
+                <div class="column-header">
+                    <h2>{{ column.title }}</h2>
+                    <span class="task-count">{{ getTasksByStatus(column.id).length }}</span>
+                </div>
+                <div class="column-body" :data-status="column.id" :ref="el => setColumnRef(column.id, el)">
+                    <div 
+                        v-for="task in getTasksByStatus(column.id)" 
+                        :key="task.id"
+                        :data-id="task.id"
+                        class="task-card"
+                        :class="'priority-' + task.priority"
+                        @click="showEditModal(task)"
+                    >
+                        <div class="task-header">
+                            <h3>{{ task.title }}</h3>
+                            <button @click.stop="deleteTask(task.id)" class="btn-delete">×</button>
+                        </div>
+                        <p v-if="task.description" class="task-description">{{ task.description }}</p>
+                        <div class="task-footer">
+                            <div class="task-tags">
+                                <span v-for="tag in task.tags" :key="tag" class="tag">{{ tag }}</span>
+                            </div>
+                            <div class="task-meta">
+                                <span v-if="task.total_time_spent > 0" class="time-spent">
+                                    ⏱ {{ formatTime(task.total_time_spent) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Create/Edit Modal -->
+        <div v-if="showModal" class="modal-overlay" @click="closeModal">
+            <div class="modal" @click.stop>
+                <div class="modal-header">
+                    <h2>{{ isEditing ? '编辑任务' : '新建任务' }}</h2>
+                    <button @click="closeModal" class="btn-close">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>标题 *</label>
+                        <input v-model="currentTask.title" type="text" placeholder="输入任务标题" class="input">
+                    </div>
+                    <div class="form-group">
+                        <label>描述</label>
+                        <textarea v-model="currentTask.description" placeholder="输入任务描述" class="textarea"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>优先级</label>
+                        <select v-model="currentTask.priority" class="select">
+                            <option value="low">低</option>
+                            <option value="medium">中</option>
+                            <option value="high">高</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>标签</label>
+                        <div class="tag-input-container">
+                            <div class="tag-list">
+                                <span v-for="(tag, index) in currentTask.tags" :key="index" class="tag">
+                                    {{ tag }}
+                                    <button @click="removeTag(index)" class="tag-remove">×</button>
+                                </span>
+                            </div>
+                            <input 
+                                v-model="newTag" 
+                                @keydown.enter.prevent="addTag"
+                                type="text" 
+                                placeholder="输入标签后按回车" 
+                                class="input"
+                            >
+                        </div>
+                    </div>
+                    <div v-if="isEditing" class="form-group">
+                        <label>状态历史</label>
+                        <div class="history-list">
+                            <div v-for="record in taskHistory" :key="record.id" class="history-item">
+                                <span class="history-time">{{ formatDateTime(record.changed_at) }}</span>
+                                <span class="history-change">
+                                    {{ record.from_status ? getStatusName(record.from_status) : '创建' }} 
+                                    → {{ getStatusName(record.to_status) }}
+                                </span>
+                                <span v-if="record.reason" class="history-reason">{{ record.reason }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button @click="closeModal" class="btn-secondary">取消</button>
+                    <button @click="saveTask" class="btn-primary">{{ isEditing ? '保存' : '创建' }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
